@@ -58,6 +58,7 @@
 #include "utils/Utils.h"
 
 #include "common/CameraProviderExtension.h"
+#include "common/OPlusVendorTags.h"
 
 namespace android {
 
@@ -725,7 +726,14 @@ status_t CameraProviderManager::setUpVendorTags() {
     sp<VendorTagDescriptorCache> tagCache = new VendorTagDescriptorCache();
 
     for (auto& provider : mProviders) {
-        tagCache->addVendorDescriptor(provider->mProviderTagid, provider->mVendorTagDescriptor);
+        sp<VendorTagDescriptor> mergedDescriptor;
+        status_t res = mergeOPlusVendorTags(provider->mVendorTagDescriptor, mergedDescriptor);
+        if (res != OK || mergedDescriptor == nullptr) {
+            ALOGE("%s: failed to merge OPlus vendor tags for provider %s (res %d)",
+                    __FUNCTION__, provider->mProviderName.c_str(), res);
+            mergedDescriptor = provider->mVendorTagDescriptor;
+        }
+        tagCache->addVendorDescriptor(provider->mProviderTagid, mergedDescriptor);
     }
 
     VendorTagDescriptorCache::setAsGlobalVendorTagCache(tagCache);
